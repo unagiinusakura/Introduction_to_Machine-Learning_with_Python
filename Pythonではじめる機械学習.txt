@@ -1,0 +1,1923 @@
+Pythonではじめる機械学習
+
+1章:はじめに
+
+1.7 最初のアプリケーション:アイリスのクラス分類
+  ・アイリスについて、花弁の長さと幅、ガクの長さと幅をセンチメートル単位で測定
+  ・植物学者がsetosa,versicolor,virginicaにアイリスを分類したデータ
+  
+    sepal length:ガクの長さ
+    sepal_width:ガクの幅
+    petal length:花弁の長さ
+    
+  ・targetデータの0はsetosa,１はversicolor,2はvirginica
+    
+  ・機械学習では個々のアイテムをサンプルと呼び、その特性を特徴量と呼ぶ 
+    
+  
+  # データを読む
+	from sklearn.datasets import load_iris
+	iris_dataset = load_iris()
+	
+	
+1.7.2成功度合の測定：訓練データとテストデータ
+  ・モデルの性能評価をするため、集めたラベル付きデータを２つに分けるのが一般的
+  ・ train_test_split関数を使えばデータとラベルの75%を訓練データ、残り25%をテストデータにする
+  ・データを大文字のXでラベルを小文字のyで示す
+  
+  # データを分割
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, y_train, y_test = train_test_split(iris_dataset['data'], iris_dataset['target'], random_state=0) 
+    
+
+1.7.3最初にすべきこと：データをよく観察する
+  ・機械学習モデルを構築する前にデータを検査すべき
+  ・ペアプロットを使うとすべての組み合わせ可能な特徴量グラフを表示
+  
+  # dfからscatter matrixを作成し、y_trainに従って色を付ける
+  iris_dataframe = pd.DataFrame(X_train, columns=iris_dataset.feature_names)
+  grr = pd.plotting.scatter_matrix(iris_dataframe, c=y_train, figsize=(15, 15), marker='o',hist_kwds={'bins':20}, s=60, alpha=.8, cmap=mglearn.cm3)
+
+
+1.7.4最初のモデル：k-最近傍法
+  ・すべての機械学習モデルはEstimatorという個別のクラスに実装される
+  ・モデルを使う前にクラスのインスタンスを生成してオブジェクトを作る
+  
+  # オブジェクトを作成する
+	from sklearn.neighbors import KNeighborsClassifier
+	knn = KNeighborsClassifier(n_neighbors=1)
+	
+  # 訓練データからモデルを構築する
+	knn.fit(X_train, y_train)
+	
+  ・sklearnのモデルの多くには多数のパラメータがあるがそのほとんどは速度の高速化や、まれにしか使わない
+  
+
+1.7.5予測を行う
+  ・sk-learnは入力は常に2次元NUmPy配列が必要
+  ・1次元配列を2次元配列に変更するには、reshape(-1,1)を使う
+    例：np.linspace(-3, 3, 1000).reshape(-1,1)
+
+  # 新規データを作成する
+	X_new = np.array([[5, 2.9, 1, 0.2]])
+	
+  # 新規データを予測する
+	prediction = knn.predict(X_new)
+	print('Prediction: {}'.format(prediction))
+	print('Predictedd target name:{}'.format(iris_dataset['target_names'][prediction]))
+
+1.7.6 モデルの評価
+
+  # テストデータを判定させる
+	y_pred = knn.predict(X_test)
+
+  # knnオブジェクトのscoreメソッドを用いてtestの精度を判定する
+	print('Test sest score: {:.2f}'.format(knn.score(X_test, y_test)))
+	
+1.8 まとめと今後の展望
+  #訓練と評価を行う為に必要な最小手順
+    from sklearn.model_selection import train_test_split
+    from sklearn.neighbors import KNeighborsClassifier
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+         iris_dataset['data'], iris_dataset['target'], random_state=0) 
+         
+    knn = KNeighborsClassifier(n_neighbors=1)
+    knn.fit(X_train, y_train)
+    
+    print('Test sest score: {:.2f}'.format(knn.score(X_test, y_test)))
+    
+         
+2章:教師あり学習  
+  ・教師あり機械学習はクラス分類と回帰問題に大別できる
+  ・２つだけの分類だと2クラス分類、3つ以上だと多クラス分類
+  ・2クラス分類では一方のクラスを陽性(positive)クラス、もう一方を陰性(nagative)クラスと呼ぶ
+  
+2.2 汎化、過剰適合、適合不足
+  ・モデルが未知のデータに正確に予想が出来るなら、訓練データを用いてテストセットに対して汎化(generalize)出来ているという
+  ・単純なモデルの方が新しいデータに対してよく汎化できる
+
+
+2.3 教師あり機械学習アルゴリズム
+2.3.1 サンプルデータセット
+  ・forgeデータセットは合成した2クラス分類データ
+    2つの特徴量を持つ26のデータポイントで構成されている
+
+  # データセットの生成(forgeデータセット)
+	X, y = mglearn.datasets.make_forge()
+	
+  ・回帰アルゴリズムには合成したwaveデータセットを用いる
+    入力として1つの特徴量とモデルの対象となるターゲット変数をもつ
+    
+  # データセットの生成(waveデータセット)
+	X, y = mglearn.datasets.make_wave(n_samples=40)
+		
+  ・cancerデータセットは乳がんの腫瘍を計測したもので、良性(benign)か悪性(malignant)のラベルが付いている
+    このデータは30の特徴量をもつ569のデータポイントで構成されている
+  
+  # データセットの生成(cancerデータセット)#
+	from sklearn.datasets import load_breast_cancer
+	cancer = load_breast_cancer()
+	print('cancer.keys(): \n{}'.format(cancer.keys()))  
+
+  ・boston_housingデータは1970年代のボストン近郊の住宅地の住宅価格の中央値を
+    犯罪率、チャールズ川からの距離などから予測するもの。
+    13の特徴量を持つ506のデータポイントが含まれている
+    
+  # データセットの生成(bostonデータセット)
+	from sklearn.datasets import load_boston
+	boston = load_boston()
+	print('Data shape: {}'.format(boston.data.shape))    
+
+  ・boston_housingデータで特徴量間の積(交互作用)をみるデータ
+    104の特徴量を持つ506のデータポイントが含まれている
+    
+  # データセットを拡張し、特徴量間の積を含めたデータ
+	X, y = mglearn.datasets.load_extended_boston()
+	print('X.shape: {}'.format(X.shape))
+	
+	
+2.3.2 k-最近傍法(k-NN)
+  ・1つの最近傍点のみだと決定境界線は訓練データに近く、多くすると決定境界線は滑らかになる
+
+  # forgeデータセットに対するクラス分類
+	from sklearn.model_selection import train_test_split
+	X, y = mglearn.datasets.make_forge()
+
+	X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+	
+	from sklearn.neighbors import KNeighborsClassifier
+	clf = KNeighborsClassifier(n_neighbors=3)	
+	clf.fit(X_train, y_train)
+  
+  # テストデータに対して予測と汎化性能を確認
+	print('Test set predictions: {}'.format(clf.predict(X_test)))	
+	
+	print('Test set accuracy: {:.2f}'.format(clf.score(X_test, y_test)))
+	
+	
+2.3.2.3 k-近傍回帰
+	
+  # 回帰のためのk-最近傍アルゴリズム
+	from sklearn.neighbors import KNeighborsRegressor
+
+  # 3つの最近傍点を考慮するように設定してモデルのインスタンスをし学習させる
+	reg = KNeighborsRegressor(n_neighbors=3)
+	reg.fit(X_train, y_train)
+  
+  # testデータの決定係数を表示
+	print('Test set R^2:{:.2f}'.format(reg.score(X_test, y_test)))	
+	
+
+2.3.2.5 利点と欠点とパラメータ
+  ・KNeighbors分類器には近傍点の数とデータポイント間の距離測度が重要パラメータ
+  ・近傍点の数は３や５程度で十分な場合がほとんど
+  ・訓練セットが大きくなると予測は遅くなる
+  
+2.3.3 線形モデル
+
+2.3.3.2 線形回帰(通常最小2乗法：oridinary least squares:OLS)  
+  ・予測と真の回帰ターゲットyとの平均二乗誤差が最小になるようにする
+
+  # 予測と真の回帰ターゲットyとの平均二乗誤差が最小になるようにパラメータwとbを求める
+	from sklearn.linear_model import LinearRegression
+	X, y = mglearn.datasets.make_wave(n_samples=60)
+	X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+
+	lr = LinearRegression().fit(X_train, y_train)
+  
+  # 傾き(w)は重み or 係数と呼ばれcoef_属性に格納される
+  # オフセット or 切片はintercept_属性に格納される
+	print('lr.coef_:{}'.format(lr.coef_))
+	print('lr.intercept_:{}'.format(lr.intercept_))
+  
+  ・sckit-learnは訓練データから得らえた属性には全て最後にアンダースコアを付ける慣習になっている
+  
+  # 訓練セットとテストセットに対する性能を確認する
+	print('Training set score:{:.2f}'.format(lr.score(X_train, y_train)))
+	print('Test set score:{:.2f}'.format(lr.score(X_test, y_test)))
+  
+  ・標準的な線形回帰は過剰適合を起きる可能性がある
+  
+2.3.3.3 リッジ回帰  
+  ・係数の絶対値の大きさを可能な限り小さくする(傾きを小さくする)
+  ・この制約条件は正則化と呼ばれ、過剰適合を防ぐために明示的にモデルを制約する
+  ・リッジ回帰で用いられている正則化はL2正則化と呼ばれる
+  ・Ridgeは制約の強いモデルなので過剰適合の危険が少ない
+  
+   # リッジ回帰の実行と結果を確認
+	from sklearn.linear_model import Ridge
+
+	ridge = Ridge().fit(X_train, y_train)
+	print('Training set score: {:.2f}'.format(ridge.score(X_train, y_train)))
+	print('Test set score: {:.2f}'.format(ridge.score(X_test, y_test)))
+  
+  ・モデルの簡潔さと訓練データに対する性能がトレードオフで、alphaパラメータで重きを指定できる
+  ・デフォルトのalphaは1.0
+    
+  # alphaパラメータを変更してスコアを確認する
+	ridge10 = Ridge(alpha=10).fit(X_train, y_train)
+	print('Training set score: {:.2f}'.format(ridge10.score(X_train, y_train)))
+	print('Test set score: {:.2f}'.format(ridge10.score(X_test, y_test)))
+  
+  ・十分な訓練データがある場合には正則化はあまり重要ではなくなる -> リッジ回帰と線形回帰は同じ性能を示す
+  ・線形回帰ではデータ量が多くなるとモデルが過剰適合する
+  
+2.3.3.4 Lasso
+  ・リッジ回帰同様に係数が0になるように制約をかけるが、L1正則化と呼ばれる。
+  ・Lassoにおいてはいつくかの係数が完全に０になる = いくつかの特徴量を完全に無視する
+  
+   # ラッソ回帰の実行と結果を確認  
+	from sklearn.linear_model import Lasso
+
+	lasso = Lasso().fit(X_train, y_train)
+	print('Training set score: {:.2f}'.format(lasso.score(X_train, y_train)))
+	print('Test set score: {:.2f}'.format(lasso.score(X_test, y_test)))
+	print('Number of features used: {}'.format(np.sum(lasso.coef_ !=0))) #使用された特徴量の数
+	
+  ・適合不足の度合いを減らすにはalphaを減らせばよい、この時max_iter(最大繰り返し数)を増やす必要がある
+  
+  # alphaとmax_iterを変更して実行する
+	lasso001 = Lasso(alpha=0.01, max_iter=100000).fit(X_train, y_train)
+	print('Training set score: {:.2f}'.format(lasso001.score(X_train, y_train)))
+	print('Test set score: {:.2f}'.format(lasso001.score(X_test, y_test)))
+	print('Number of features used: {}'.format(np.sum(lasso001.coef_ !=0)))
+
+  ・実際に使う場合はまずリッジ回帰を試す
+  ・特徴量がたくさんあって、そのうち重要なものはわずかしかないと予測される場合はラッソ回帰
+  ・解釈しやすいモデルがほしいならLasso
+
+2.3.3.5 クラス分類のための線形モデル
+  ・線形モデルのクラス分類は予測式の値が0より小さければクラスは-1、大きければクラスは+1となる
+  ・線形モデルによるクラス分類は決定境界が入力の線形関数になる
+  
+  ・ロジスティク回帰と線形サポートベクタマシンは最も一般的な線形クラス分類アルゴリズム
+  ・ロジスティク回帰と線形サポートベクタマシンはデフォルトでＬ２正則化を行う
+  
+  # ロジスティク回帰と線形SVCをforgeデータセットに適用して、決定境界を可視化する
+	from sklearn.linear_model import LogisticRegression
+	from sklearn.svm import LinearSVC
+
+	X, y = mglearn.datasets.make_forge()
+	fig, axes = plt.subplots(1, 2, figsize=(10,3))
+
+	for model, ax in zip([LinearSVC(), LogisticRegression()], axes):
+    	clf = model.fit(X, y)
+    	mglearn.plots.plot_2d_separator(clf, X, fill=False, eps=0.5, ax=ax)
+    	mglearn.discrete_scatter(X[:, 0], X[:, 1], y, ax=ax)
+    	ax.set_title('{}'.format(clf.__class__.__name__))
+    	ax.set_xlabel('Feature 0')
+    	ax.set_ylabel('Feature 1')
+	axes[0].legend()    
+  
+  ・LogisticRegressionとLinearSVCの正則化強度はパラメータCで、Cが大きくなると正則化は弱くなる
+  ・L2正則化でなくL1正則化をつかう場合はモデルの引数penalty="l1"とする
+
+  # 正則化をL1に変更する  
+  lr_l1 = LogisticRegression(penalty='l1').fit(X_train, y_train)
+  
+2.3.3.6 線形モデルによる多クラス分類
+  ・2クラス分類アルゴリズムを多クラスに拡張する一般的手法は1対その他(one-vs.-rest)
+  ・各クラスに対してそのクラスと他のすべてのクラスを分類する2クラス分類モデルを学習する
+  ・1クラスにつき１つの2クラス分類器があるということは、クラスごとに係数ベクトルと切片があるという事になる
+  
+  # LinearSVCでのクラス分類とグラフ表示
+   
+	linear_svm = LinearSVC().fit(X, y)
+	print('Coefficient shape:', linear_svm.coef_.shape)
+	print('Intercept shape:', linear_svm.intercept_.shape)
+
+	mglearn.discrete_scatter(X[:, 0], X[:, 1], y)
+	line = np.linspace(-15, 15)
+	for coef, intercept, color in zip(linear_svm.coef_, linear_svm.intercept_, ['b', 'r', 'g']):
+	    plt.plot(line, -(line * coef[0] + intercept) / coef[1], c=color)
+	plt.ylim(-10, 15)
+	plt.xlim(-10, 8)
+	plt.xlabel('Feature 0')
+	plt.ylabel('Feature 1')
+	plt.legend(['class 0', 'Class 1', 'Class 2', 'Line class 0', 'Line class 1', 'Line class 2'], loc=(1.01, 0.3))
+	  
+2.3.3.7 利点、欠点、パラメータ
+・線形モデルの主要なパラメータは回帰モデルではalpha,LinerSVCとLogisticRegressionではC
+・alphaが大きい場合、Cが小さい場合は単純なモデルに対応する
+・通常Cやalphaを調整するには対数スケールで値を変更する
+・L1正則化を使うかL2正則化を使うかを決める、デフォルトではL2がよい
+・サンプル数が10万以上の場合はLogisticRegressionとRidgeにsolver='sag'オプションを使うと高速になる
+・線形モデルは特徴量の数がサンプルの個数よりも多きときに性能を発揮する
+
+2.3.4 ナイーブベイズクラス分類器
+  ・訓練が線形モデルよりも高速だが、汎化性能がわずかに劣る場合が多い
+  ・クラスに対する統計値を個々の特徴量ごとに集めてパラメータを学習する
+  ・scikit-learnには3種類のナイーブベイズクラスがある
+    GaussianNBは任意の連続値データに適用出来る
+    BernoulliNBは2値データでクラス分類に使用
+    MultinomialNBはカウントデータに用いられクラス分類に使用
+    
+  ・MultinomialNBとBernoulliNBにはalphaパラメータがあり、モデルの複雑さを制御する
+  ・線形モデルですら時間がかかるような大規模データセットに対するベースラインモデルとして有効
+  
+2.3.5 決定木
+  ・決定木はクラス分類と回帰タスクに広く用いられているモデル
+  ・決定木の学習は正解に最も早くたどり着けるような一連のYES/No型の質問の学習をする、これらの質問はtestと呼ばれる
+  ・１つの対象値のデータポイントしか含まないような決定木の葉を純粋(pure)と呼ぶ
+  ・過剰適合を防ぐには構築過程で木の生成を早めに止める事前枝刈りと一度木を構築してから情報の少ないノードを削除する事後枝刈りがある
+  
+  # DecisionTreeClassifierでクラス分類
+	from sklearn.tree import DecisionTreeClassifier
+
+	cancer = load_breast_cancer()
+	X_train, X_test, y_train, y_test = train_test_split(
+	    cancer.data, cancer.target, stratify=cancer.target, random_state=42)
+	tree = DecisionTreeClassifier(random_state=0)
+	tree.fit(X_train, y_train)
+	print('Accuracy on training set: {:.3f}'.format(tree.score(X_train, y_train)))
+	print('Accuracy on test set: {:.3f}'.format(tree.score(X_test, y_test)))
+	
+  # 木の深さを4に設定
+	tree = DecisionTreeClassifier(max_depth=4, random_state=0)
+	tree.fit(X_train, y_train)
+	
+	
+2.3.5.3 決定木の解析    
+  ・treeモジュールのexport_graphviz関数で木を可視化出来る。グラフを.dotファイル形式でフィアルに書き出す
+  
+# treeモジュールのexport_graphviz関数を使って可視化する
+	from sklearn.tree import export_graphviz
+	export_graphviz(tree, out_file='tree.dot', class_names=['malignant', 'benigin'],
+	               feature_names=cancer.feature_names, impurity=False, filled=True)
+	               
+# .dotファイルを読み込む
+	import graphviz
+
+	with open('tree.dot') as f:
+	    dot_graph = f.read()
+	graphviz.Source(dot_graph) 
+	
+2.3.5.4 決定木の特徴量の重要性
+  ・決定木から導出できる要約に特徴量の重要度があり個々の特徴量がどの程度重要かを示す
+    0はまったく使われていない、1は完全にターゲットを予測出来る
+    
+# 特徴量の重要度を確認する ★
+	print('Feature importtances:\n{}'.format(tree.feature_importances_))                     
+	
+# 特徴量の重要度を可視化する
+	def plot_feature_importances_cancer(model):
+	    n_features = cancer.data.shape[1]
+	    plt.barh(range(n_features), model.feature_importances_, align='center')
+	    plt.yticks(np.arange(n_features), cancer.feature_names)
+	    plt.xlabel('Feature importance')
+	    plt.ylabel('Feature')
+	    
+	plot_feature_importances_cancer(tree) 
+	
+  ・決定木を使った回帰モデルの場合、外挿が出来ない(訓練データのレンジ外では予測不可) 
+  
+2.3.5.5 長所、短所、パラメータ
+
+  ・過剰適合を防ぐには事前枝刈り戦略のmax_depth,max_leaf_nodes,min_samplesのどれか１つを選ぶ
+  ・データのスケールに対して完全に不変で特徴量の正規化や標準化は必要ない
+  ・短所は過剰適合しやすく汎化性能が低い
+
+2.3.6 決定木のアンサンブル学習    
+  ・アンサンブル法とは複数の機械学習モデルを組み合わせることでより強力なモデルを構築する手法
+  
+2.3.6.1 ランダムフォレスト
+  ・少しづつ異なる決定木をたくさんあつめたもの
+  ・ランダムフォレストは個々の決定木が互いに異なるように決定木の構築過程で乱数を導入している
+  
+  ・モデル作成には決定木の数を決めなけらばいけない。n_estimatorsパラメータ
+  ・決定木を作るにはデータからブートストラップサンプリングを行う
+    →n_samples個のデータポイントから交換あり(同じサンプルが何度も選ばれる可能性あり)データポイントを
+      ランダムにn_samples回選び出す復元抽出を行う事で、データの一部が欠け、一部が何度か現れるデータセットを作る
+      例：[a,b,c,d] →[b,d,d,c]や[d,a,d,a]が得られる
+  ・決定木は特徴量のサブセットをランダムに選びその特徴量を使うものの中から最適なテストを選ぶ。
+    特徴量サブセットの大きさはmax_featureで制御できる
+    
+  ・max_featureを大きくすると最も識別性の高い特徴量を使うので訓練データに容易に適合できる
+  ・max_featureを小さくすると決定木をかなり深く作らないとデータに適合出来ない
+  
+# ランダムフォレストを行う    
+	from sklearn.ensemble import RandomForestClassifier
+	from sklearn.datasets import make_moons
+
+	X, y = make_moons(n_samples=100, noise=0.25, random_state=3)
+	X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=42)
+
+	forest = RandomForestClassifier(n_estimators=5, random_state=2)
+	forest.fit(X_train, y_train) 
+	
+  ・ランダムフォレストの一部として構築された決定木はestimator_属性に格納されている
+
+# ランダムフォレストの個々の決定木を可視化する
+	fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+	for i, (ax, tree) in enumerate(zip(axes.ravel(), forest.estimators_)):
+	    ax.set_title('Tree {}'.format(i))
+	    mglearn.plots.plot_tree_partition(X_train, y_train, tree, ax=ax)
+	    
+	mglearn.plots.plot_2d_separator(forest, X_train, fill=True, ax=axes[-1, -1], alpha=.4)
+	axes[-1, -1].set_title('Random Forest')
+	mglearn.discrete_scatter(X_train[:, 0], X_train[:, 1], y_train) 
+	
+  ・ランダムフォレストは個々のどの決定木よりも過剰適合が少なく、直観に合致した決定境界を描いている	       
+  
+  長所、短所、パラメータ
+  ・計算時間短縮にはCPU の並列化を使う。n_jobsパラメータでコア数を指定出来る    
+  ・random_stateを指定しないと構築されるモデルが大きく変わる
+  ・テキストデータなどはうまく機能しない
+  ・重要パラメータはn_estimatores,max_features,max_depth
+  
+2.3.6.2 勾配ブースティング回帰木(勾配ブースティングマシン)
+  ・回帰にもクラス分類にも利用できる
+  ・1つ前の決定木の誤りを次の決定木が修正するようにして、決定木を順番に作っていく
+  ・乱数性はないが協力な事前枝刈りが用いられる
+  ・深さ1-5ぐらいの非常に浅い決定木が用いて、弱学習機を多数組み合わて行う
+  ・ランダムフォレストに比べるとパラメータ設定の影響を受けやすいが、性能はよい
+  ・learning_rateという個々の決定木がそれまでの決定木の過ちをどれくらい強く補正するか制御するパラメータがある
+  
+# 勾配ブースティング回帰木を行う
+	from sklearn.ensemble import GradientBoostingClassifier
+	                             
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+	gbrt = GradientBoostingClassifier(random_state=0)
+	gbrt.fit(X_train, y_train)
+
+	print('Accuracy on training set: {:.3f}'.format(gbrt.score(X_train, y_train)))
+	print('Accuracy on test set: {:.3f}'.format(gbrt.score(X_test, y_test)))
+	
+  ・過剰適合を低減するには深さの最大値を制限して事前枝刈りを行うか、学習率を下げればよい
+  ・一般にランダムフォレストは頑健なので先に試した方が良い
+  
+  長所、短所、パラメータ
+   ・短所はチューニングに細心の注意が必要なのと、訓練にかかる時間が長い
+   ・主要なパラメータはn_estimatorsとlearning_rete
+   ・勾配ブースティングはn_estimatorsを大きくすると過学習を招く
+   ・重要パラメータに個々の決定木の複雑さを減らすmax_depth
+   
+2.3.7 カーネル法を用いたサポートベクターマシン
+   ・SVMはクラス分類にも回帰にも利用できる
+   ・2次元では分離できないデータに非線形の特徴量データを加える事で分類する
+   
+# 2次元の特徴量に+して3次元にしてグラフで表示   
+	X_new = np.hstack([X, X[:, 1:] **2])
+
+	from mpl_toolkits.mplot3d import Axes3D, axes3d
+	figure = plt.figure()
+	# 3Dで可視化
+	ax = Axes3D(figure, elev=-152, azim=-26)
+	# y == 0の点をプロットしてからy == 1 の点をプロット
+	mask = y == 0
+	ax.scatter(X_new[mask, 0], X_new[mask, 1], X_new[mask, 2], c='b', cmap=mglearn.cm2, s=60)
+	ax.scatter(X_new[~mask, 0], X_new[~mask, 1], X_new[~mask, 2], c='r',marker='^', cmap=mglearn.cm2, s=60)
+	ax.set_xlabel('feature0')
+	ax.set_ylabel('feature1')
+	ax.set_zlabel('feature1 ** 2')
+	
+2.3.7.2 カーネルトリック
+   ・拡張された特徴表現上でのデータポイント間の距離を実際にデータポイントの拡張を計算せずに直接計算する方法
+   ・高次元空間にMAPする方法が２つあり、多項式カーネルとガウシアンカーネル
+   
+# サポートベクタをプロットする
+from sklearn.svm import SVC
+X, y = mglearn.tools.make_handcrafted_dataset()
+svm = SVC(kernel= 'rbf', C=10, gamma=0.1).fit(X,y)
+mglearn.plots.plot_2d_separator(svm, X, eps=.5)
+mglearn.discrete_scatter(X[:,0], X[:,1], y)
+
+sv = svm.support_vectors_
+#サポートベクタのクラスラベルはdual_coef_の正負によって与えられる
+sv_labels = svm.dual_coef_.ravel() > 0
+mglearn.discrete_scatter(sv[:, 0], sv[:, 1], sv_labels, s=15, markeredgewidth=3)
+plt.xlabel('Feature 0')
+plt.ylabel('Feature 1')
+   
+
+2.3.7.3 SVMを理解する
+   ・2つのクラスの境界に位置するごく一部の訓練データポイントだけが決定境界を決定する。ここデータポイントをサポートベクタと呼ぶ
+
+2.3.7.4 SVMパラメータの調整
+   ・gammaパラメータはガウシアンカーネルの幅を調整する、つまり点が近いということを意味するスケールを決定する
+     →gammaが小さいと決定境界がなめらかで、大きいと個々のデータポイントをより重視する
+     →gammaが小さいとモデルの複雑さは小さく、大きいとモデルは複雑になる
+   ・Cパラメータは正則化パラメータで、個々のデータポイントの重要度を制限する
+     →Cを大きくするとデータポイントがより強い影響を持つ
+     
+   ・SVCはデータスケールに敏感で、すべての特徴量の変位が同じスケールであることが必要 ★  
+
+# RBFカーネル法を用いたSVMをcancerデータセットに適用
+# デフォルトパラメータはC=1、gamma=1/n_features
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+	svc = SVC()
+	svc.fit(X_train, y_train)
+
+	print("Axxuracy on training set: {:.2f}".format(svc.score(X_train, y_train)))
+	print("Axxuracy on test set: {:.2f}".format(svc.score(X_test, y_test)))
+	
+2.3.7.5 SVMのためのデータの前処理
+   ・すべての特徴量がだいたい同じスケールになるようにスケール変換する必要がある
+   ・SVMでよく使われるのはすべての特徴量が0から1の間になるようにスケール変換する
+   ・各特徴量の最小値を求めて、(訓練データ-最小値) / 訓練セットの特徴量ごとのレンジ
+   ・MinMaxScalerで行うと簡単
+   
+# 手動計算によるスケール変換   
+	# 訓練セットの特徴量ごとに最小値を計算
+	min_on_training = X_train.min(axis=0)
+	# 訓練セットの特徴量ごとにレンジ(最大値-最小値)を計算
+	range_on_training = (X_train - min_on_training).max(axis=0)
+
+	# 最小値を引いてレンジで割る
+	# 個々の特徴量はmin=0, max=1となる
+	X_train_scaled = (X_train - min_on_training) / range_on_training   
+   
+   
+2.3.7.6 利点、欠点、パラメータ
+   ・データにわずかな特徴量しかない場合にも複雑な決定境界を生成する事ができる
+   ・10000サンプルくらいまでなら機能するが、100000サンプルになると実行時やメモリ使用量で難しい
+   ・問題点はデータの前処理とパラメータの調整 
+   
+2.3.8 ニューラルネットワーク(ディープラーニング)     
+   ・多層パーセプトロン(multilayer perceptron:MLP)
+   
+2.3.8.2 ニューラルネットワークのチューニング 
+   ・MLPのデフォルトは100隠れユニット、活性化関数はrelu
+   ・MLPもスケール変換が望ましい(平均が0で分散が1のデータ) ;StandardScalerを使うと簡単
+   ・ニューラルネットワークは学習を開始する前に重みを乱数で割り当てる、この乱数の初期化がモデルに影響を及ぼす
+   
+# MLPでmoonsデータをクラス分類する
+	from sklearn.neural_network import MLPClassifier
+	from sklearn.datasets import make_moons
+
+	X, y = make_moons(n_samples=100, noise=0.25, random_state=3)
+
+	X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=42)
+
+	mlp = MLPClassifier(solver='lbfgs', random_state=0).fit(X_train, y_train)
+	mglearn.plots.plot_2d_separator(mlp, X_train, fill=True, alpha=.3)
+	mglearn.discrete_scatter(X_train[:, 0], X_train[:, 1], y_train)
+	plt.xlabel('Feature 0')
+	plt.ylabel('Feature 1')  
+	
+
+# 隠れ層のユニット数を10個に変更する
+	mlp = MLPClassifier(solver='lbfgs', random_state=0, hidden_layer_sizes=[10])
+
+# 隠れ層のユニット数を10個で隠れ層を2層使う
+	mlp = MLPClassifier(solver='lbfgs', random_state=0, hidden_layer_sizes=[10,10])
+
+# 隠れ層のユニット数を10個で隠れ層を2層でさらに活性化関数にtanhを使う
+	mlp = MLPClassifier(solver='lbfgs',activation='tanh', random_state=0, hidden_layer_sizes=[10,10])
+	
+# l2正則化を入れる
+	mlp = MLPClassifier(solver='lbfgs',alpha=0.01, random_state=0, hidden_layer_sizes=[10,10])
+	   
+
+# 繰り返し回数を増やす
+	mlp = MLPClassifier(max_iter=1000, random_state=0)
+   
+
+# 手動計算による均が0で分散が1のデータ 
+	# 訓練セットの特徴量ごとの平均値を算出
+	mean_on_train = X_train.mean(axis=0)
+	# 訓練セットの特徴量ごとの標準偏差を算出
+	std_on_train = X_train.std(axis=0)
+
+	# 平均を引き、標準偏差の逆数でスケール変換する
+	# これでmean=0, std=1になる
+	X_train_scaled = (X_train- mean_on_train) / std_on_train
+	# まったく同じ変換(訓練データの平均と標準偏差を使って)をテストセットに渡す
+	X_test_scaled = (X_test - mean_on_train) / std_on_train
+	
+   ・ニューラルネットワークが学習した内容を解析するにはモデル内部の重みを見る
+   
+# 行30の特徴量,列は100の隠れユニットでcancerデータのヒートマップ
+	plt.figure(figsize=(20, 5))
+	plt.imshow(mlp.coefs_[0], interpolation='none', cmap='viridis')
+	plt.yticks(range(30), cancer.feature_names)
+	plt.xlabel('Columns in weight matrix')
+	plt.ylabel('Input feature')
+	plt.colorbar()
+	
+2.3.8.3 長所、短所、パラメータ
+   ・最大の利点は、大量のデータに含まれているデータを費やし複雑なモデルを構築できる
+   ・データを慎重に前処理する必要がある→平均が0で分散が1のデータに変換する必要がある
+   
+   ・ニューラルネットワークのパラメータを調整する一般的な方法
+    ・過剰適合できるように大きいネットワークを作り、訓練データが学習できるか確認する
+    ・ネットワークを小さくするか、alphaを増やして正則化を強化し、汎化性能を向上させる
+   
+   ・NLPのデフォルトアルゴリズムはadamでよく機能するがデータスケールに敏感,
+     lbfgsというアルゴリズムは頑健だがデータが大きいと訓練時間がかかる、
+     sgdは設定パラメータが多数ある
+
+2.4 クラス分類器の不確実性推定
+   ・クラス分類器の不確実性推定に、decision_functionとpredect_proba関数がある
+      
+# 勾配ブースティングモデルを構築      
+	from sklearn.ensemble import GradientBoostingClassifier
+	from sklearn.datasets import make_circles
+	X, y = make_circles(noise=0.25, factor=0.5, random_state=1)
+
+	# わかりやすいようにクラスをblueとredにする
+	y_named = np.array(['blue', 'red'])[y]
+
+	# train_test_splitは任意の数の配列に適用できる
+	# すべての配列は整合するように分割される
+	X_train, X_test, y_train_named, y_test_named, y_train, y_test = \
+	train_test_split(X, y_named, y, random_state=0)
+
+	# 勾配ブースティングモデルを構築
+	gbrt = GradientBoostingClassifier(random_state=0)
+	gbrt.fit(X_train, y_train_named)
+	
+2.4.1 決定関数(Decision Function)
+   ・2クラスの場合、decision_functionの結果の配列は(n_samples,)の形でサンプル毎に1個の浮動小数点が返る
+   
+# decision_functionの最初のいくつかを表示
+	print('Dexison function:\n{}'.format(gbrt.decision_function(X_test)[:6]))
+
+	
+2.4.2 確率の予測
+   ・predict_probaの出力はそれぞれのクラスに属する確率で出力配列は2クラスの場合(n_samples,2)
+   ・出力は常に0から1であり双方の和は常に１となる
+   ・あるモデルの確信度が実際の正答率と一致している場合、較正されている(calibrated)という
+   
+# predict_probaの出力の最初の数行を見る
+	print('predicted probabilities:\n{}'.format(gbrt.predict_proba(X_test[:6])))  
+
+2.4.3 多クラス分類の不確実性 
+   ・predict_probaとdecision_functionの結果は(n_samples,n_classes)の形の配列なる
+   ・2クラス分類の場合  だけ「陽性」クラスであるclasses_[1]に対応する1列しかない
+   
+2.5 まとめと展望
+   ・最近傍法:小さいデータに関しては良いベースラインとなる。説明が容易 
+         
+   ・線形モデル:最初に試してみるべきアルゴリズム。非常に大きいデータセットに適する。
+                 非常に高次元のデータに適する
+                 
+   ・ナイーブベイズ:クラス分類しか使えない。線形モデルよりもさらに高速。非常に大きいデータセット、
+                     高次元データに適する。線形モデルより精度が劣る事が多い
+                     
+   ・決定木:非常に高速。データのスケールを考慮する必要なし。可視化が可能で説明しやすい。
+   
+   ・ランダムフォレスト:単一の決定木より高速で頑健で協力。データのスケールを考慮する必要なし。
+                        高次元の疎なデータには適さない
+                        
+   ・勾配ブースティング決定木:多くの場合ランダムフォレストよりも少し精度が高い。ランダムフォレストより訓練に時間がかかるが
+                              予測が速くメモリ使用量も小さい。ランダムフォレストよりパラメータに敏感
+     
+   ・サポートベクタマシン:同じような意味をもつ特徴量からなる中規模なデータセットに対しては協力
+                          データのスケールを調整する必要がある。パラメータに敏感
+                          
+   ・ニューラルネットワーク:非常に複雑なモデルを構築できる。特に大きなデータセットに有効。データのスケールを
+                            調整する必要がある。パラメータに敏感。大きいモデルは訓練に時間がかかる
+                            
+   ・新しいデータセットを扱う場合、まずは線形モデルやナイーブベイズや最近傍法などの簡単なモデルで精度確認を試すべき
+  
+
+3章:教師なし学習と前処理   
+3.1 教師なし学習の種類
+   ・データセットの変換
+     ・教師なし変換の利用法として最も一般的なのは次元削減
+       →少量の本質的な特徴を表す特徴量でそのデータを表す要約方法を見つける  
+     ・そのデータを「構成する」部品、もしくは成分を見つけること
+   
+   ・クラスタリング  
+     ・データを似たような要素から構成されるグループに分けるアルゴリズム
+     
+3.2 教師なし学習の難しさ     
+   ・教師なし学習はDSがデータをよりよく理解するために探索的に用いられる場合が多い
+   ・教師なし学習は教師あり学習の前処理ステップとしての利用  
+                                
+3.3 前処理とスケール変換
+3.3.1 さまざまな前処理
+   ・StandardScaler:個々の特徴量の平均が0で分散が1になるように変換
+   ・RobustScaler:個々の特徴量が一定の範囲に入るように変換で中央値と四分位数を用いるので外れ値が無視できる
+   ・MinMaxScaler:データがちょうど0から1の間に入るように変換
+   ・Normalizer:個々のデータポイントを特徴量ベクトルがユークリッド長1になるように変換、方向だけが問題になる場合に使われる
+
+3.3.2 データ変換の適用
+
+   ・Transformメソッドは常に訓練データの最小値を引き、訓練データのレンジで割る
+   
+# MinMaxScalerを前処理に用いる
+	#データセットロードと分割
+	from sklearn.datasets import load_breast_cancer
+	from sklearn.model_selection import train_test_split
+	cancer = load_breast_cancer()
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=1)
+
+	# 前処理を実装したクラスをインポートしてインスタンスを生成する
+	from sklearn.preprocessing import MinMaxScaler
+	scaler = MinMaxScaler()
+	
+	# fitメソッドを訓練データに対して適用し、スケール変換器を適合させる
+	scaler.fit(X_train)
+	
+	# 訓練データをスケール変換するにはtransformメソッドを用いる	
+	X_train_scaled = scaler.transform(X_train)
+	
+	# テストデータを変換
+	X_test_scaled = scaler.transform(X_test)
+	
+3.3.3 訓練データとテストデータを同じように変換する
+   ・効率の良いショートカット
+# fitを呼び出してからtransformを呼び出すより効率的なfit_transformメソッドがある
+    # 従来
+      scaler = StandardScaler()
+      X_scaled = scaler.fit(X).transform(X)
+      
+    # 同じ結果だがより効率的に計算される
+      X_scaled_d = scaler.fit_tranform(X)
+      
+3.3.4 教師あり学習における前処理の効果
+            
+# SVCでMinMaxScalerを使って前処理する
+	from sklearn.svm import SVC
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+	scaler = MinMaxScaler()
+	scaler.fit(X_train)
+	X_train_scaled = scaler.transform(X_train)
+	X_test_scaled = scaler.transform(X_test)
+
+	# 変換された訓練データで学習
+	svm.fit(X_train_scaled, y_train)
+
+	# 変換されたテストセットでスコア計算
+	print('Scaled test set accuracy: {:.2f}'.format(svm.score(X_test_scaled, y_test)))
+	
+
+3.4 次元削減、特徴量抽出、多様体学習
+
+3.4.1 主成分分析(principal component analysis:PCA)
+   ・主成分分析とはデータセットの特徴量を相互に統計的に関連しないように回転する手法
+     多くの場合、回転した特徴量からデータを説明するのに重要な一部の特徴量だけを抜き出す
+     
+   ・最も分散が大きい方向を見つけそれに「第一成分」というラベルを付ける
+   ・次に第一成分と直交する方向の中から最も情報を持っている方向を探す
+   ・このような方法で見つける方向を主成分と呼び、もとの特徴量と同じ数だけ主成分が存在する
+   
+3.4.1.1 cancerデータセットのPCAによる可視化
+   ・PCA適用前にデータをStandardScalerでスケール変換する
+   
+# StandardScalerによるスケール変換    
+	from sklearn.datasets import load_breast_cancer
+	cancer = load_breast_cancer()
+
+	from sklearn.preprocessing import StandardScaler
+	scaler = StandardScaler()
+	scaler.fit(cancer.data)
+	X_scaled = scaler.transform(cancer.data)   
+	   
+   ・PCA変換の学習と適用するにはPCAオブジェクトを生成しfitメソッドで主成分を見つけ、
+     Transformメソッドで回転と次元削減を行う
+     デフォルトではデータの回転(とシフト)しか行わず、全ての主成分を維持する。
+     データの次元削減を行うにはPCAオブジェクト作成時に維持する主成分の数を指定する必要がある
+
+# PCAによる次元削減     
+	from sklearn.decomposition import PCA
+	# データの最初の２つの主成分だけ維持する
+	pca = PCA(n_components=2)
+	# cancerデータセットにPCAモデルを適合
+	pca.fit(X_scaled)
+
+	# 最初の２つの主成分に対してデータポイントを変換
+	X_pca = pca.transform(X_scaled)
+	print('Original shape: {}'.format(str(X_scaled.shape)))
+	print('Reduced shape: {}'.format(str(X_pca.shape)))     
+     
+     
+# 第一主成分と第二主成分によるプロット、クラスごとに色分け
+	plt.figure(figsize=(8, 8))
+	mglearn.discrete_scatter(X_pca[:, 0], X_pca[:, 1], cancer.target)
+	plt.legend(cancer.target_names, loc='best')
+	plt.gca().set_aspect('equal')
+	plt.xlabel('First principal component')
+	plt.ylabel('Second principal componet')  
+	
+	        
+   ・主成分はPCAの適合過程で、componets_属性に格納される
+   ・components_のそれぞれの行が１つの主成分に対応する。行は重要度によってソートされている(第一主成分が最初に来る)
+     列はPCA変換する前のもとの特徴量に対応する 
+
+# ヒートマップを使った可視化例     
+plt.matshow(pca.components_, cmap='viridis')
+plt.yticks([0, 1], ['First component', 'Second component'])
+plt.colorbar()
+plt.xticks(range(len(cancer.feature_names)), cancer.feature_names, rotation=60, ha='left')
+plt.xlabel('Feature')
+plt.ylabel('Principal components')    
+
+3.4.1.2 固有顔による特徴量抽出
+   ・PCAのもう1つの利用方法は特徴量抽出   
+   ・Labeled Faces in the Wildデータセットはインターネットから集めた有名人の顔画像
+   
+   ・ピクセル表現で2つの画像を比較するということは、相互の画像の対応するピクセルの値を比較することになる
+   ・PCAのwhitenオプションを使うと主成分が同じスケールになるようにスケール変換する。(StandardScalerと同じ)
+   
+   
+# PCAオブジェクトを訓練し、最初の100主成分を抜き出し訓練データとテストデータを変換する
+
+	pca = PCA(n_components=100, whiten=True, random_state=0).fit(X_train)
+	X_train_pca = pca.transform(X_train)
+	X_test_pca = pca.transform(X_test)
+
+	print('X_train_pca.shape: {}'.format(X_train_pca.shape))
+	   
+# 主成分の最初の100要素を使って1-最近傍法クラス分類をする
+
+	knn = KNeighborsClassifier(n_neighbors=1)
+	knn.fit(X_train_pca, y_train)
+	print('Test set accuracy: {:.2f}'.format(knn.score(X_test_pca, y_test)))   
+	
+   
+   ・画像データについては、見つけた主成分を容易に可視化できる
+   ・もとの特徴空間へ戻す作業はinverse_transformメソッドで行える
+   
+3.4.2 非負値行列因子分解(Non-negative matrix factorization:NMF)
+   ・次元削減に用いる事ができる
+   ・成分とその係数が常にゼロ以上であることが求められる
+   ・個々の特徴量が非負のデータにしか適用できない
+   ・データを非負の重み付き和に分解する方法は、いくつもの独立した発生源から得られたデータを
+     重ね合わせて作れれるようなデータに対して特に有効
+   ・NMFはPCAよりも理解しやすい成分に分解してくれる
+   
+3.4.2.1 NMFの合成データへの適用
+   ・NMFが扱えるようにデータがすべて正であるようにしなければならない        
+   ・2成分のNFMではデータの極端な部分の方向を向く
+   ・1成分だとデータの平均値へ向かう成分を作る
+   ・PCAと異なり成分の数が変わるとまったく別の成分集合が構成される
+   ・NMFはすべての成分が同等
+   ・NMFは乱数初期値を用いるため、乱数シードが変わると結果も変わる場合がある
+  
+3.4.2.2 NMFの顔画像への適用
+
+   ・NMFは再構成やデータのエンコードに用いられるよりはデータ中から興味深いパターンを見つけるのに用いられる
+   
+# NMFを使って最初の15の成分を見る
+	from sklearn.decomposition import NMF
+	nmf = NMF(n_components=15, random_state=0)
+	nmf.fit(X_train)
+	X_train_nmf = nmf.transform(X_train)
+	X_test_nmf = nmf.transform(X_test)
+
+	fix, axes = plt.subplots(3, 5, figsize=(15, 12), subplot_kw={'xticks': (), 'yticks': ()})
+	for i, (component, ax) in enumerate(zip(nmf.components_, axes.ravel())):
+	    ax.imshow(component.reshape(image_shape))
+	    ax.set_title('{}. component'.format(i))   
+    
+    
+    ・個々のデータポイントを固定数の成分集合の重み付き和に分解出来るアルゴリズムのその他例
+      ・独立成分分析(ICA)
+      ・因子分析(FA)
+      ・スパースコーディング
+      
+3.4.3 t-SNEを用いた多様体学習
+    ・データを変換して散布図で可視化したいとき多様体学習アルゴリズム(manifold learning algorithms)がある
+      はるかに複雑なマッピングを行い、より良い可視化を実現できる
+    ・多様体学習アルゴリズムは主に可視化に用いられ、3以上の新しい特徴量を生成するように利用することはない
+    ・訓練に使ったデータを変換することしか出来ない
+    ・多様体学習は探索的なデータ解析には有用だが、最終的な目的が教師あり学習の場合にはほとんど用いられない
+    ・t-SNEはデータポイントの距離を可能な限り維持する2次元表現を見つけようとする
+      →どの点が近傍か示す情報を維持しようとする
+      
+        
+# 手書き数字データセット(digitsデータセット)
+	from sklearn.datasets import load_
+		
+	digits
+	digits = load_digits() 
+	
+	
+# t-SNEを使ってデータを2次元に可視化する
+
+	from sklearn.manifold import TSNE
+	tsne = TSNE(random_state=42)
+	# fitではなくfit_transformを用いる。TSNEにはtrasformメソッドがない
+	digits_tsne = tsne.fit_transform(digits.data)
+	
+	plt.figure(figsize=(10, 10))
+	plt.xlim(digits_tsne[:, 0].min(), digits_tsne[:, 0].max() + 1)
+	plt.ylim(digits_tsne[:, 1].min(), digits_tsne[:, 1].max() + 1)
+	for i in range(len(digits.data)):
+	    # 点ではなく数字をテキストにプロットする
+	    plt.text(digits_tsne[i, 0], digits_tsne[i, 1], str(digits.target[i]),
+	            color = colors[digits.target[i]],
+	            fontdict={'weight':'bold', 'size' :9})
+	    plt.xlabel('t-SNE feature 0')
+	    plt.ylabel('t-SNE feature 1')	
+	    
+	    
+3.5 クラスタリング 
+    ・目的は、同じクラスタ内のデータが類似していて、異なるクラスタのデータは異なるようにデータを分割すること
+    
+3.5.1 k-meansクラスタリング
+    
+    ・データのある領域を代表するようなクラスタ重心を見つけようとする
+    ・このアルゴリズムは次の２つのステップを繰り返す
+      ・個々のデータポイントを最寄りのクラスタ重心に割り当てる
+      ・次に個々のクラスタ重心をその点に割り当てられたデータポイントの平均に設定する
+      ・データポイントの割り当てが変化しなくなったらアルゴリズムは終了
+      
+# 合成2次元データ
+	from sklearn.datasets import make_blobs 
+	
+# k-meansを使う
+	from sklearn.cluster import KMeans
+
+	# 合成2次元データを作る
+	X, y = make_blobs(random_state=1)
+
+	# クラスタリングモデルを作る
+	kmeans = KMeans(n_clusters=3)
+	kmeans.fit(X)
+	
+    ・クラスタラベルはkmeans.labels_属性で確認出来る
+	print('Cluster memberships:\n{}'.format(kmeans.labels_))        
+	      
+    ・predeictメソッドを訓練セットに対して行うと、labels_と同じ結果になる
+	print(kmeans.predict(X))
+	
+    ・クラスタセンタはcluster_centers_属性に格納されている
+    
+# 散布図でクラスタリングされた結果とクラスタセンタを表示
+	mglearn.discrete_scatter(X[:, 0], X[:, 1], kmeans.labels_, markers='o')
+	mglearn.discrete_scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], [0, 1, 2],
+	                        markers='^', markeredgewidth=2)
+	                        
+3.5.1.1 k-meansがうまくいかない場合
+    ・k-meansでは比較的単純な形しか見つけられない
+    ・k-meansではクラスタ境界をクラスタセンタのちょうど中間に引くため、場合によっては驚く結果になる
+    
+                            
+3.5.1.2 ベクトル量子化、もしくは成分分解としてのK-means
+    ・k-meansを単一成分で個々のデータポイントを表現する成分分解手法として見る考え方をベクトル量子化(vector quantization)                        
+    ・k-meansの欠点の１つは初期化が乱数で行われる。つまりアルゴリズムの出力が乱数に依存する 
+    
+                           
+3.5.2 凝集型クラスタリング
+    ・個々のデータポイントをそれぞれ個別のクラスタとして開始し、最も類似した2つのクラスタを併合していく。
+      これを何らかの終了条件が満たされるまで繰り返す
+              
+    ・scikit-learnは指定した数のクラスタだけが残るまで似たクラスタを併合し続ける
+    
+    ・最も類似したクラスタを決定する連結度にはざまざまなものがある
+      ・ward:デフォルト。併合した際にクラスタ内の分散の増分が最小になるように2つのクラスタを選択する。
+             多くの場合比較的同じサイズのクラスタになる
+             
+      ・average:クラスタ間のすべてのポイント間の距離の平均値が最小の2クラスタを併合する
+      
+      ・complete:2つのクラスタの点間の距離の最大値が最小となるものを併合する
+      
+      ※基本はｗardはほとんどのデータセットでいまくいく
+      
+    ・凝集型クラスタリングには新しいデータに対して予測することができない
+      モデルを作って、訓練セットに対する所属クラスタを得るにはfit_predictを用いる
+      
+# 凝集型クラスタリングの確認
+	from sklearn.cluster import AgglomerativeClustering
+	from sklearn.datasets import make_blobs
+
+	X, y = make_blobs(random_state=1)
+	agg = AgglomerativeClustering(n_clusters=3)
+	assignment = agg.fit_predict(X)
+
+	mglearn.discrete_scatter(X[:, 0], X[:, 1], assignment)
+	plt.xlabel('Feature 0')
+	plt.ylabel('Feature 1')  
+	
+3.5.2.1 階層型クラスタリングとデンドログラム	
+    ・階層型クラスタリングを可視化するにはデンドログラム(dendrogram)を用いる
+          
+    ・scikit-learnには実装されていないので、SciPyを使う
+    
+# SciPyからデンドログラム関数とwardクラスタリング関数をインポート
+	from scipy.cluster.hierarchy import dendrogram, ward
+
+	X, y = make_blobs(random_state=0, n_samples=12)
+	# wardクラスタリングをデータ配列Xに適用
+	# Scipyのward関数は、凝集型クラスタリングを行った際のブリッジ距離を示す配列を返す
+	linkage_array = ward(X)
+	# このlinkage_arrayに書かれたクラスタ間距離をデンドログラムとしてプロットする
+	dendrogram(linkage_array)      
+	
+    ・y軸の枝の長さが2つのクラスタがどれだけ離れているかを示している
+    
+3.5.3 DBSCAN    
+    ・density-based spatial clustering of applications with noise(密度に基づくノイズあり空間クラスタ)
+    ・ユーザがクラスタ数を先験的に与える必要がない
+    ・どのクラスタにも属さない点を判別できる
+    ・比較的おおきいデータセットにも適用できる
+    ・高密度領域(多くの点が近接して混んでるよ領域)を構成し、比較的空虚な領域で区切られる
+    ・DBSCANにはmin_samplesとepsの2つのパラメータがある
+    ・どの点にも属さないものはノイズ(noise)となり、ラベルは-1と表示される
+
+# DBSCANを使ってクラスタリング    
+	from sklearn.cluster import DBSCAN
+	X, y = make_blobs(random_state=0, n_samples=12)
+
+	dbscan = DBSCAN()
+	clusters = dbscan.fit_predict(X)
+	print('Cluster memberships:\n{}'.format(clusters))    
+	    
+    ・epsを増やすと多くの点がクラスタに含まれるようになる
+    ・min_samplesを増やすとより多くのデータポイントがノイズとなる
+    ・epsが重要で、このパラメータがデータポイントが近いことを意味する    
+    ・min_samplesの設定は密度が低い領域にあるデータポイントが外れ値となるか独自のクラスタになるかに影響する
+    ・良いepsを見つけるにはStandardScalerやMinMaxScalerでスケール変換してからの方がよい 
+    
+3.5.4 クラスタリングアルゴリズムの比較と評価 
+                  
+3.5.4.1 正解データを用いたクラスタリングの評価
+    ・調整ランド指数(ARI)と正規化相互情報量(NMI)という指標を使う
+    ・定量的な指標で最良の場合に1、関係ないクラスタリングの場合は0
+    ・クラスタリング評価ではaccuracy_scoreを用いるのはNG
+
+#k-means,凝集型クラスタリング,DBSCANをARIで比較
+
+	from sklearn.metrics.cluster import adjusted_rand_score
+	X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+
+	# データを平均0,分散を1にスケール変換する
+	scaler = StandardScaler()
+	scaler.fit(X)
+	X_scaled = scaler.transform(X)
+
+	fig, axes = plt.subplots(1, 4, figsize=(15, 3), subplot_kw={'xticks': (), 'yticks': ()})
+
+	# 利用するアルゴリズムのリストを作る
+	from sklearn.cluster import KMeans
+	from sklearn.cluster import AgglomerativeClustering
+	from sklearn.cluster import DBSCAN
+
+	algorithms = [KMeans(n_clusters=2), AgglomerativeClustering(n_clusters=2),DBSCAN()]
+
+	# 参照のためにランダムなクラスタ割り当てを作る
+	random_state = np.random.RandomState(seed=0)
+	random_clusters = random_state.randint(low=0, high=2, size=len(X))
+
+	# ランダムな割り当てをプロット
+	axes[0].scatter(X_scaled[:, 0], X_scaled[:, 1], c=random_clusters, cmap=mglearn.cm3, s=60)
+	axes[0].set_title('Random assignment - ARI: {:.2f}'.format(adjusted_rand_score(y, random_clusters)))
+
+	for ax, algorithm in zip(axes[1:], algorithms):
+	    # クラスタ割り当てとクラスタセンタをプロット
+	    clusters = algorithm.fit_predict(X_scaled)
+	    ax.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap=mglearn.cm3, s=60)
+	    ax.set_title('{} - ARI: {:.2f}'.format(algorithm.__class__.__name__,adjusted_rand_score(y, clusters))) 
+
+
+3.5.4.2 正解データを用いないクラスタリングの評価
+    ・シルエットスコアはクラスタのコンパクトさを計算する。大きい方がよく、完全な場合で1になる
+
+#k-means,凝集型クラスタリング,DBSCANをシルエットスコアで比較
+	from sklearn.metrics.cluster import silhouette_score
+
+	X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+	# データを平均0,分散を1にスケール変換する
+	scaler = StandardScaler()
+	scaler.fit(X)
+	X_scaled = scaler.transform(X)
+
+	fig, axes = plt.subplots(1, 4, figsize=(15, 3), subplot_kw={'xticks': (), 'yticks': ()})
+
+	# 参照のためにランダムなクラスタ割り当てを作る
+	random_state = np.random.RandomState(seed=0)
+	random_clusters = random_state.randint(low=0, high=2, size=len(X))
+
+	# ランダムな割り当てをプロット
+	axes[0].scatter(X_scaled[:, 0], X_scaled[:, 1], c=random_clusters, cmap=mglearn.cm3, s=60)
+	axes[0].set_title('Random assignment: {:.2f}'.format(silhouette_score(X_scaled, random_clusters)))
+
+	algorithms = [KMeans(n_clusters=2), AgglomerativeClustering(n_clusters=2),DBSCAN()]
+
+	for ax, algorithm in zip(axes[1:], algorithms):
+	    # クラスタ割り当てとクラスタセンタをプロット
+	    clusters = algorithm.fit_predict(X_scaled)
+	    ax.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap=mglearn.cm3, s=60)
+	    ax.set_title('{} :{:.2f}'.format(algorithm.__class__.__name__, silhouette_score(X_scaled, clusters))) 
+
+3.5.4.3 顔画像データセットを用いたアルゴリズムの比較
+    ・何かおかしなものを見つける解析を外れ値検出と呼ぶ
+
+3.5.5 クラスタリング手法のまとめ
+    ・k-meansと凝集型クラスタリングではクラスタの数を指定することができる
+    ・DBSCANはepsパラメータを用いて近接度を指定すると間接的にクラスタサイズを制御できる
+    ・k-meansはクラスタセンタを用いてクラスタの特徴を表すことができる
+    ・DBSCANはどのクラスタにも属さないノイズを検出することができ,また自動的にクラスタの数を決められる
+      複雑な形状のクラスタを見つける事ができる
+      非常に異なるサイズのクラスタを作る場合がある
+    ・凝集型クラスタリングはデータの階層的な分割の候補を全て提示する  
+    
+4章:データの表現と特徴量エンジニアリング
+    ・カテゴリ特徴量は離散値特徴量とも呼ばれ、一般に数値ではない
+    ・最良のデータ表現を模索することを特徴量エンジニアリングと呼ぶ
+
+4.1 カテゴリ変数
+    ・adultデータセットはアメリカ成人の収入データでこのタスクは収入が50,000ドルを超えるかどうかを予測
+    
+4.1.1 ワンホットエンコーディング(ダミー変数)
+    ・カテゴリ変数を1つ以上の0と1の値を持つ新しい特徴量で置き換えるもの
+    
+    ・カテゴリ変数をワンホットエンコーディングに変換するにはpandasを使うのか簡単
+    
+    
+4.1.1.1 文字列で表されているカテゴリデータのチェック
+    ・pandasのget_dummies関数は自動的にobject型やカテゴリ型の行を全てone-hot-encodeingしてくれる
+# pd.get_dummies
+    data_dummies = pd.get_dummies(data)
+    
+    ・data_dummiesでvalues属性を用いればNumPy配列に変換しそれを使って機械学習出来る
+    
+# dfからNumpy配列データを取り出す例
+	features = data_dummies.loc[:, 'age':'occupation_ Transport-moving']
+	# Numpy配列を取り出す
+	X = features.values
+	y = data_dummies['income_ >50K'].values 
+	
+	
+4.1.2 数値でエンコードされているカテゴリ	  
+    ・カテゴリ特徴量が整数でエンコードされていることは多い
+    ・数値を文字列に変換すればよい
+    
+# 数値を文字に変換
+    demo_df['Integer Feature'] = demo_df['Integer Feature'].astype(str)
+    
+4.2 ビニング、離散化、線形モデル、決定木
+    ・線形モデルを連続データに対してより強力にする方法としてビニングもしくは離散化がある
+    
+# binを指定してbinを区切る
+      bins = np.linspace(-3, 3, 11)
+      which_bin = np.digitize(X, bins=bins)
+      
+    ・binにしたデータは数値→カテゴリへの置き換えなのでbin結果をone-hot-encodeingすればよい  
+      
+# OneHotEncoderで変換する
+	from sklearn.preprocessing import OneHotEncoder
+	# OneHotEncoderで変換する
+	encoder = OneHotEncoder(sparse=False)
+	# encoder.fitでwhich_binに現れる整数値のバリエーションを確認
+	encoder.fit(which_bin)
+	# transformでワンホットエンコーディングを行う
+	X_binned = encoder.transform(which_bin)
+
+   ・特徴量をビニングすることは決定木にとってはメリットがないが、線形モデルは効果絶大
+   
+   
+4.3 交互作用と多項式   
+   ・特徴量表現を豊かにする方法としてもとのデータの交互作用特徴量と多項式特徴量を加える方法
+             
+#線形モデルに傾きを加える例
+    X_combined = np.hstack([X, X_binned])
+    
+    reg = LinearRegression().fit(X_combined, y)
+	line_combined = np.hstack([line, line_binned])
+	plt.plot(line, reg.predict(line_combined), label='linear regression combined')
+
+	for bin in bins:
+	    plt.plot([bin, bin], [-3, 3], ':', c='k')
+	plt.legend(loc='best')
+	plt.ylabel('Regression output')
+	plt.xlabel('Input feature')
+	plt.plot(X[:, 0], y, 'o', c ='k')
+	
+#データポイントがどのビンに入っているかを示す特徴量とx軸のどこにあるかを示す特徴量の交互作用例
+	X_product = np.hstack([X_binned, X * X_binned])
+	
+	reg = LinearRegression().fit(X_product, y)
+
+	line_product = np.hstack([line_binned, line* line_binned])
+	plt.plot(line, reg.predict(line_product), label= 'liner regression product')
+
+	for bin in bins:
+	    plt.plot([bin, bin], [-3, 3], ':', c='k')
+	plt.legend(loc='best')
+	plt.ylabel('Regression output')
+	plt.xlabel('Input feature')
+	plt.plot(X[:, 0], y, 'o', c ='k')	
+	
+	
+   ・特徴量の多項式はある特徴量xに対して、x**2,x**3,x**4を考える
+     PolynomialFeaturesに実装されている
+     
+#多項式を加える例     
+     from sklearn.preprocessing import PolynomialFeatures
+
+	# x **10までの多項式を加える
+	# デフォルトの'include_bias=True'だと、常にに1となる特徴量を加える
+	poly = PolynomialFeatures(degree=10, include_bias=False)
+	poly.fit(X)
+	X_poly = poly.transform(X)
+	
+   ・個々の特徴量の意味はget_feature_namesメソッドで知ることができる
+	print('Polynomial feature name:\n{}'.format(poly.get_feature_names()))
+	
+   ・多項式特徴量を線形モデルと組み合わせると古典的な多項式回帰モデルになる
+   
+	reg = LinearRegression().fit(X_poly, y)
+
+#多項式モデルをグラフで表示
+	line_poly = poly.transform(line)
+	plt.plot(line, reg.predict(line_poly), label='polynomial linear regression')
+	plt.plot(X[:, 0], y, 'o', c='k')
+	plt.ylabel('Regression output')
+	plt.xlabel('Input feature')
+	plt.legend(loc='best')   
+	
+4.4 単変量非線形変換
+   ・log,exp,sinなどの数学関数を用いた変換もある
+   ・線形モデルやニューラルネットワークモデルは特徴量のスケールや分散と密接に結びついている
+   
+   
+4.5 自動特徴量選択   
+   ・単変量統計でクラス分類する場合、分散分析(ANOVA)手法を用いる
+   ・scikit-learnで使用する場合
+     クラス分類にはf_classif(デフォルト値),回帰にはf_regressionを用い、p値を元に特徴量を捨てる方法も指定する
+     最も単純なSelectBestでは選択する特徴量の数を指定する
+     SelectPercentileは残す特徴量の割合を選択する
+     
+#canserデータにノイズを加えてf_classifを使う
+	from sklearn.datasets import load_breast_cancer
+	from sklearn.feature_selection import SelectPercentile
+	from sklearn.model_selection import train_test_split
+
+	cancer = load_breast_cancer()
+
+	# シードを指定して乱数を決定
+	rag = np.random.RandomState(42)
+	noise = rag.normal(size=(len(cancer.data), 50))
+	# ノイズ特徴量をデータに加える
+	# 最初の30特徴量はデータセットから来たもの。続く50特徴量はノイズ
+	X_w_noise = np.hstack([cancer.data, noise])
+
+	X_train, X_test, y_train, y_test = train_test_split(X_w_noise, cancer.target, random_state=0, test_size=.5)
+	# f_classif(デフォルト)とSlelectionPercentileを使って50%の特徴量を選択
+	select = SelectPercentile(percentile=50)
+	select.fit(X_train, y_train)
+	# 訓練セットを変換
+	X_train_selected = select.transform(X_train)
+
+	print('X_train.shape: {}'.format(X_train.shape))
+	print('X_train_selected.shape: {}'.format(X_train_selected.shape))
+     
+   ・どの特徴量が使われたかget_supportメソッドで調べることができる
+
+#特徴量可視化の例   
+	mask = select.get_support()
+	print(mask)
+	# マスクを可視化する　--黒が真、白が偽
+	plt.matshow(mask.reshape(1,-1), cmap='gray_r')
+	plt.xlabel('Sample index')  
+	
+4.5.2 モデルベース特徴量選択
+   ・教師あり学習モデルを用いて個々の特徴量の重要性を判断し重要なものだけを残す手法
+   ・特徴選択に用いる教師ありモデルは最終的に使う教師ありモデルと同じでなくてよい
+   ・モデルベースの選択は変数間の交互作用を捉える事ができる
+   ・モデルベース特徴量選択を用いるにはSekectFromModel変換器をつかう
+   
+   
+#モデルベースをランダムフォレスト使って特徴量を計算する例      
+	from sklearn.feature_selection import SelectFromModel
+	from sklearn.ensemble import RandomForestClassifier
+	select = SelectFromModel(RandomForestClassifier(n_estimators=100, random_state=42),threshold='median')
+
+	select.fit(X_train, y_train)
+	X_train_l1 = select.transform(X_train)
+	print('X_train.shape: {}'.format(X_train.shape))
+	print('X_train_l1.shape: {}'.format(X_train_l1.shape)) 
+
+	mask = select.get_support()
+	# マスクを可視化する --黒が真、白が偽
+	plt.matshow(mask.reshape(1,-1), cmap='gray_r')
+	plt.xlabel('Sample index')   
+	
+4.5.3 反復特徴量
+   ・異なる特徴量を用いた一連のモデルを作成する
+   ・再帰的特徴量削減(RFE)はすべての特徴量から開始してモデルを作り、そのモデルで最も重要度が低い特徴量を削除する
+    そしてまたモデルを作り、最も重要度が低い特徴量を削除する。これをあらかじめ定めた特徴量になるまで繰り返す
+    
+    
+#RFEをランダムフォレスト使って特徴量を計算する例     
+	from sklearn.feature_selection import RFE
+	select = RFE(RandomForestClassifier(n_estimators=100, random_state=42), n_features_to_select=40)
+
+	select.fit(X_train, y_train)
+	# 選択された特徴量を可視化する
+	mask = select.get_support()
+	plt.matshow(mask.reshape(1, -1), cmap='gray_r')
+	plt.xlabel('Sample index')
+
+4.6 専門知識の利用
+   ・時系列に対する予測タスクでは、過去から学習と未来を予測する
+     →訓練セットとテストセットを分割する際にある特定の日までのすべてのデータを訓練セットとして
+       それ以降をテストセットとする
+       
+   ・計算機で日時を格納するにはPOSIX時刻がよく用いられる
+
+# 10**9 で割ってPOSIX時刻に変換
+	X = citibike.index.astype('int64').to_numpy().reshape(-1, 1) // 10**9          
+
+
+5章:モデルの評価と改良
+5.1 交差検証(cross-validation)
+   ・交差検証は、データの分割を何度も繰り返して行い、複数のモデルを訓練する
+   ・最もよく用いられる交差検証手法はk分割交差検証でkはユーザが定める数。多くは5～10程度
+   
+5.1.1 scilit-learnでの交差検証
+   ・model_selectionモジュールのcross_val_score関数に実装されている
+   
+# irisデータでLogisticRegressionを評価する
+	from sklearn.model_selection import cross_val_score
+	from sklearn.datasets import load_iris
+	from sklearn.linear_model import LogisticRegression
+
+	iris= load_iris()
+	logreg = LogisticRegression()
+
+	scores = cross_val_score(logreg, iris.data, iris.target)
+	print('Cross-validation scores: {}'.format(scores))   
+   
+   ・デフォルトは3分割でパラメータcvで分割数を変更出来る
+# パラメータcvで分割数を変更
+	scores = cross_val_score(logreg, iris.data, iris.target, cv=5)
+	print('Cross-validation scores: {}'.format(scores)) 
+	
+   ・交差検証の精度をまとめるには一般的に平均値を用いる
+    print('Average cross-validation score: {:.2f}'.format(scores.mean()))
+    
+5.1.2 交差検証の利点
+   ・データを多数に分割すると、モデルの訓練データセットに対する敏感さを知ることができる
+   ・データを効率的に使える
+   
+5.1.3 層化k分割交差検証と他の戦略
+   ・単純なk分割交差検証でなく、scikit-learnは層化k分割交差検証を用いている
+   ・クラス分類器を評価するときは層化k分割交差検証を使うほうがよい
+   ・回帰に関してはscikit-learnは標準的はk分割交差検証をデフォルトで用いる
+   
+5.1.3.1 交差検証のより詳細な制御
+   ・cvパラメータに交差検証分類器を与える事でデータ分割方法をより詳細に制御可能
+   ・kFold分割器クラスをインポートして分割数を与えてインスタンスを生成する
+   
+# 強制的にK分割交差検証を使う
+	from sklearn.model_selection import KFold
+	kfold = KFold(n_splits=5)   
+	print('Cross-validation scores:\n{}'.format(cross_val_score(logreg, iris.data, iris.target, cv=kfold)))
+             
+   ・層化して分割する代わりにデータをシャッフルすることもできる。その場合はrandom_stateも設定した方がよい
+        
+# 強制的にK分割交差検証+ランダム有を使う
+	kfold = KFold(n_splits=3, shuffle=True, random_state=0)
+	print('Cross-validation scores:\n{}'.format(cross_val_score(logreg, iris.data, iris.target, cv=kfold)))
+       
+5.1.3.2 １つ抜き交差検証
+   ・k分割交差検証の個々の分割が1サンプルしかないもの
+   ・大規模データにはむかない
+
+#1つ抜き交差検証の例
+	from sklearn.model_selection import LeaveOneOut
+	loo = LeaveOneOut()
+	scores = cross_val_score(logreg, iris.data, iris.target, cv=loo)
+	print('Number of cv iterations:', len(scores))
+	print('Mean accuracy: {:.2f}'.format(scores.mean()))
+	
+5.1.3.3 シャッフル分割交差検証
+   ・毎回train_size個の点を選び出して訓練セットとし、test_size個の点を選び出しててテストセットとして、n_iter繰り返す
+   
+#データセットの50%を訓練セット、50%をテストセットにして10回分割を繰り返す例
+	from sklearn.model_selection import ShuffleSplit
+	shffle_split = ShuffleSplit(test_size=.5, train_size=.5, n_splits=10)
+	scores = cross_val_score(logreg, iris.data, iris.target, cv=shffle_split)
+	print('Cross-validation scores:\n{}'.format(scores))   
+
+   ・層化バージョンを使う場合はStartifiedShuffleSplit
+   
+5.1.3.4 グループ付き交差検証
+   ・訓練セットとテストセットで同じ人(カテゴリ)が重ならないようにする方法
+   ・GroupKFoldを使い、引数としてgroupsという配列をとる
+   ・groups配列はデータに含まれる、訓練セットとテストセットを分離する際に分割してはいけないグループを示す
+
+#グループ分けを使った例
+	from sklearn.model_selection import GroupKFold
+	# 合成データセットを生成
+	X, y = make_blobs(n_samples=12, random_state=0)
+	# 最初の3サンプルが同じグループに、次の4つが同じグループにする
+	groups = [0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3]
+	scores = cross_val_score(logreg, X, y, groups, cv=GroupKFold(n_splits=3))
+	print('Cross-validation scores:\n{}'.format(scores)) 
+	
+5.2 グリッドサーチ
+   ・パラメータの全ての組み合わせを試してみる手法
+     
+5.2.1 単純なグリッドサーチ
+
+# for文を使ってSVMの最適パラメータを見つける
+	from sklearn.svm import SVC
+	X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=0)
+	print('Size of training set: {} size of test set: {}'.format(X_train.shape[0], X_test.shape[0]))
+
+	best_score = 0
+
+	for gamma in [0.001, 0.01, 0.1, 1, 10, 100]:
+	    for C in [0.001, 0.01, 0.1, 1, 10, 100]:
+	        # それぞれのパラメータの組み合わせに対してSVCを訓練
+	        svm = SVC(gamma=gamma, C=C)
+	        svm.fit(X_train, y_train)
+	        # SVCをテストセットで評価
+	        score = svm.score(X_test, y_test)
+	        # 良いスコアだったらスコアとパラメータを保持
+	        if score > best_score:
+	            best_score = score
+	            best_parameters = {'C': C, 'mgamma': gamma}
+
+	print('Best score: {:.2f}'.format(best_score))
+	print('Best parameters: {}'.format(best_parameters))
+	
+5.2.2 パラメータの過剰適合の危険性と検証セット
+   ・上記の結果ではテストデータをパラメータチューニングに使ったので、モデル評価には適さない
+      →独立したデータセットが必要でデータセットを3分割にする必要がある
+
+# 訓練、検証、テストの3分割にして最適パラメータを用いる
+	from sklearn.svm import SVC
+	# データを訓練+検証セットとテストセットに分割する
+	X_trainval, X_test, y_trainval, y_test = train_test_split(iris.data, iris.target, random_state=0)
+	# 訓練+検証セットを訓練セットと検証セットに分割する
+	X_train, X_valid, y_train, y_valid = train_test_split(X_trainval, y_trainval, random_state=1)
+	print('Size of training set: {}   size of validation set: {}   size of test set: {}\n'.format(
+	      X_train.shape[0], X_valid.shape[0], X_test.shape[0]))
+
+	best_score = 0
+
+	for gamma in [0.001, 0.01, 0.1, 1, 10, 100]:
+	    for C in [0.001, 0.01, 0.1, 1, 10, 100]:
+	        # それぞれのパラメータの組み合わせに対してSVCを訓練
+	        svm = SVC(gamma=gamma, C=C)
+	        svm.fit(X_train, y_train)
+	        # SVCを検証セットで評価
+	        score = svm.score(X_valid, y_valid)
+	        # 良いスコアだったらスコアとパラメータを保持
+	        if score > best_score:
+	            best_score = score
+	            best_parameters = {'C': C, 'gamma': gamma}
+
+	# 訓練セットと検証セットを用いてモデルを再構築し、テストセットで評価
+	svm = SVC(**best_parameters)
+	svm.fit(X_trainval, y_trainval)
+	test_score = svm.score(X_test, y_test)
+	print('Best score on validation set: {:.2f}'.format(best_score))
+	print('Best parameters: ', best_parameters)
+	print('Test set score with best parameters: {:.2f}'.format(test_score))
+	
+5.2.3 交差検証を用いたグリッドサーチ
+   ・汎化性能をより良く見積もるためには訓練とテストの分割を1度だけでなく
+     それぞれのパラメータに対して交差検証をすればよい
+     
+# それぞれのパラメータの組み合わせに対して交差検証を行う
+
+	best_score = 0
+
+	for gamma in [0.001, 0.01, 0.1, 1, 10, 100]:
+	    for c in [0.001, 0.01, 0.1, 1, 10, 100]:
+	        # それぞれのパラメータの組み合わせに対してSVCを訓練する
+	        svm = SVC(gamma=gamma, C=C)
+	        # 交差検証を行う
+	        scores = cross_val_score(svm, X_trainval, y_trainval, cv=5)
+	        # 交差検証精度の平均値を計算する
+	        score = np.mean(scores)
+	        # 良いスコアが出たら、スコアとパラメータを記録する
+	        if score > best_score:
+	            best_score = score
+	            best_parameters = {'C': C, 'gamma': gamma}
+	# 訓練セットと検証セットを合わせて、モデルを再構築する
+	svm = SVC(**best_parameters)
+	svm.fit(X_trainval, y_trainval)
+	
+
+   ・scikit-learnはGridSearchCVクラスにグリッドサーチを提供している
+   ・ディクショナリを用いて探索したいパラメータを指定する
+   ・fitメソッドを呼び出すと、最適なパラメータ設定をサーチするだけでなく交差検証で最も良いスコアだった
+     パラメータを用いて、自動的に訓練セット全体に対して新しいモデルを学習してくれる
+
+# GridSerachCVの使用例(5分割層化交差検証)
+	param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100],
+	              'gamma': [0.001, 0.01, 0.1, 1, 10, 100]}  
+	              
+	# インスタンスを作成
+	from sklearn.model_selection import GridSearchCV
+	from sklearn.svm import SVC
+	grid_search = GridSearchCV(SVC(), param_grid, cv=5) 
+	
+	# 訓練セットと検証セットを分割する代わりに交差検証を行う
+	X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=0)
+	grid_search.fit(X_train, y_train)   
+	
+	print('Test set score: {:.2f}'.format(grid_search.score(X_test, y_test)))
+	
+   ・パラメータを選ぶのにテストセットは使っていない
+   ・見つけたパラメータはbest_params_属性に、交差検証精度はbest_score_属性に格納されている
+   
+    print('Best parameters: {}'.format(grid_search.best_params_))
+    print('Best cross-validation score: {:.2f}'.format(grid_search.best_score_))               
+    
+    ・係数、特徴量の重要性をみたい場合はbest_estimator_属性に格納されている
+    print('Best estimator:\n{}'.format(grid_search.best_estimator_))
+    
+5.2.3.1 交差検証の結果の解析
+   ・グリッドサーチは計算量的コストが大きいので比較的粗く小さいグリッドから始めるほうがよい
+   ・グリッドサーチの結果はsv_results_属性に格納されている
+   
+# Pandasで確認
+	import pandas as pd
+	# DataFrameへ変換
+	results = pd.DataFrame(grid_search.cv_results_)
+	# 最初の5行を表示
+	display(results.head())       
+    
+# ヒートマップで可視化
+	scores = np.array(results.mean_test_score).reshape(6,6)
+	mglearn.tools.heatmap(scores, xlabel='gamma', xticklabels=param_grid['gamma'],
+	                     ylabel='C', yticklabels=param_grid['C'], cmap='viridis')
+	                     
+	                     
+5.2.3.2 グリッドでないサーチ空間
+   ・条件付きパラメータを扱うために、param_gridはディクショナリのリストを受け付ける
+
+条件付きパラメータの例   
+param_grid = [{'kernel': ['rbf'],
+             'C': [0.001, 0.01, 0.1, 1, 10, 100],
+             'gamma': [0.001, 0.01, 0.1, 1, 10, 100]},
+             {'kernel': ['linear'],
+             'C': [0.001, 0.01, 0.1, 1, 10, 100]}]
+             
+grid_search = GridSearchCV(SVC(), param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+print('Best parameters: {}'.format(grid_search.best_params_))
+print('Best cross-validation scores: {:.2f}'.format(grid_search.best_score_)) 
+
+5.2.3.3 異なる交差検証手法を用いたグリッドサーチ
+   ・訓練やテストセットへの分割を1度だけにするには、ShuffleSplit or StartifiedShuffleSplitを用いて
+     n_iter=1にすればよい
+     
+5.2.3.4 ネストした交差検証
+   ・ネストした交差検証：元のデータを訓練とテストに1度だけ分けるのでなく交差検証で何度も分割する
+   
+#ネストした交差検証の例
+	scores = cross_val_score(GridSearchCV(SVC(), param_grid, cv=5),iris.data, iris.target, cv=5)
+	print('Cross-validation scores:', scores)
+	print('Mean cross-validation score:', scores.mean())
+	
+5.3 評価基準とスコア
+
+5.3.2 2クラス分類における基準
+    ・間違った陽性との判断を偽陽性、誤った陰性との分類を偽陰性
+    ・統計学では偽陽性をタイプⅠエラー、偽陽性をタイプⅡエラーと呼ぶ
+    
+5.3.3.3 混同行列(confusion matrix)
+
+    
+# 混同行列の例
+	from sklearn.linear_model import LogisticRegression
+
+	logreg = LogisticRegression(C=0.1).fit(X_train, y_train)
+	pred_logreg = logreg.predict(X_test)
+	print('logreg score: {:.2f}'.format(logreg.score(X_test, y_test))) 
+
+	from sklearn.metrics import confusion_matrix
+
+	confusion = confusion_matrix(y_test, pred_logreg)
+	print('Confusion matrix:\n{}'.format(confusion))   
+	
+    ・混合行列ではTP,TN,FP,FN
+    ・精度はTP+TN/(TP+TN+FP+FN)
+    ・適合率(陽性と予測されたものがどのくらい実際に陽性であったか) TP/(TP+FP)
+      適合率は偽陽性の数を制限したい場合に性能基準として用いられる
+      適合率はPPV(positive predictive value:陽性的中率)とも呼ばれる
+    ・再現率は実際に陽性サンプルのうち、陽性と予測されたものの割合 TP/(TP+FN)
+      再現率は偽陰性を避けることが重要な場合に用いる
+      再現率は感度、ヒット率、新陽性率とも呼ばれる
+    ・fスコアは適合率と再現率の調和平均  F= 2*(適合率*再現率)/(適合率+ 再現率)
+      
+# fスコアの例
+	from sklearn.metrics import f1_score
+	print('f1 score logistic regression: {:.2f}'.format(f1_score(y_test, pred_logreg)))        
+                                               
+    ・適合率・再現率・f値をまとめたレポートはclassification_report関数を使えばよい
+                                               
+# classification_reportの例
+	from sklearn.metrics import classification_report
+	print(classification_report(y_test, pred_most_frequent,target_names=['not nine', 'nine'] )) 
+	
+5.3.2.4 不確実性を考慮に入れる
+   ・クラス分類器には予測の不確実性を評価するためのdecision_function or predict_probaメソッドがある
+   ・予測を行うことはdecision_function or predict_probaの出力を固定スレッシュフォルドで分けるという事
+   ・スレッシュフォルドはdecision_functionは0、predict_probaは0.5となる
+   
+   ・例えば偽陽性が増えても構わないからより信陽性を得たい場合は決定スレッシュフォルドを変えてやる
+     デフォルトではdecision_fucntionは0以上だとクラス1に分類されるので、スレッシュを小さくする
+     
+# スレッシュフォルドを小さくした例     
+	y_pred_lower_threshold = svc.decision_function(X_test) > -.8 
+	print(classification_report(y_test, y_pred_lower_threshold))  
+	
+  ・適合率と再現率のどちらか一方を重視したい場合、又はデータが大幅に偏っている場合、
+    簡単に良い結果を得るにはスレッシュフォルドを変更すること
+    
+5.3.2.5 適合率_再現率カーブとROCカーブ  
+  ・クラス分類器に要請を設定することを作動ポイント(operating point)の設定と呼ぶ
+  ・すべての可能な適合率と再現率の組み合わせを同時にみるのに適合率-再現率カーブ(precision-recall curve)
+  ・適合率-再現率カーブを計算するprecision_recall_surveがある
+
+#precision_recall_surveの例   
+	from sklearn.metrics import precision_recall_curve
+
+	X, y = make_blobs(n_samples=(4000, 500), cluster_std=[7.0, 2], random_state=22)
+	X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+	svc = SVC(gamma=.05).fit(X_train, y_train)
+	precision, recall, thresholds = precision_recall_curve(y_test, svc.decision_function(X_test))
+
+	# ゼロに最も近いスレッショルドを探す
+	close_zero = np.argmin(np.abs(thresholds))
+	plt.plot(precision[close_zero], recall[close_zero], 'o', markersize=10,
+	        label='threshold zero', fillstyle='none', c='k', mew=2)
+
+	plt.plot(precision, recall, label='precision recall curve')
+	plt.xlabel('Precision')
+	plt.ylabel('Recall')
+	plt.legend(loc='best') 
+	
+	
+#ランダムフォレストの例 decision functionがないのでpredict_probaを使う
+ 	 
+	from sklearn.ensemble import RandomForestClassifier
+
+	rf = RandomForestClassifier(n_estimators=100, random_state=0, max_features=2)
+	rf.fit(X_train, y_train)
+
+	# RandomForestClassifierにはpredict_probaはあるがdecision_functionがない
+	precision_rf, recall_rf, thresholds_rf = precision_recall_curve(y_test, rf.predict_proba(X_test)[:, 1])
+
+	plt.plot(precision_rf, recall_rf, label='rf')
+
+	close_default_rf = np.argmin(np.abs(thresholds_rf - 0.5))
+	plt.plot(precision_rf[close_default_rf], recall_rf[close_default_rf], '^', c='k',
+	        markersize=10, label='threshold 0.5 rf', fillstyle='none', mew=2)
+	plt.xlabel('Precision')
+	plt.ylabel('Recall')
+	plt.legend(loc='best')  
+	
+  ・自動的にモデルを比較するにはカーブの下の領域を積分する。これを平均適合率という
+    average_precision_score関数で計算できる
+    
+# 平均適合率を計算
+	from sklearn.metrics import average_precision_score
+	ap_rf = average_precision_score(y_test, rf.predict_proba(X_test)[:, 1])
+	ap_svc = average_precision_score(y_test, svc.decision_function(X_test))
+	print('Average precision of random forest: {:.3f}'.format(ap_rf))
+	print('Average precision of svc: {:.3f}'.format(ap_svc))  
+	
+5.3.2.6 受信者動作特性(ROC)とAUC
+  ・偽陽性率(FPR)を真陽性率(TPR)に対してプロットする
+    真陽性率は再現率の別名で、偽陽性率はすべての陰性サンプルの個数に対する偽陽性数の割合
+    FPR = FP/(FP+TN)      
+    
+# ROCの例    
+	from sklearn.metrics import roc_curve
+	fpr, tpr, thresholds = roc_curve(y_test, svc.decision_function(X_test))
+
+	plt.plot(fpr, tpr, label='ROC Curve')
+	plt.xlabel('FPR')
+	plt.ylabel('TP R(recall)')
+	# 0に最も近いスレッショルドを見つける
+	close_zero = np.argmin(np.abs(thresholds))
+	plt.plot(fpr[close_zero], tpr[close_zero], 'o', markersize=10,
+	        label='threshhold zero', fillstyle='none', c='k', mew=2)
+	plt.legend(loc=4)   
+	
+  ・カーブ下の領域をAUC(area under the curve)と呼ぶ
+    roc_auc_score関数で計算できる
+    
+# ROCのカーブの下の領域(AUC)を計算の例
+	from sklearn.metrics import roc_auc_score
+	rf_auc = roc_auc_score(y_test, rf.predict_proba(X_test)[:, 1])
+	svc_auc = roc_auc_score(y_test, svc.decision_function(X_test))
+	print('AUC for Random Forest: {:.3f}'.format(rf_auc))
+	print('AUC for SVC: {:.3f}'.format(svc_auc))  
+	
+  ・AUCは陽性のサンプルのランキングを評価している
+  
+5.3.3 多クラス分類の基準   
+  ・偏ったデータセットに対する多クラス分類問題で最もよく用いられる基準はf値
+    macro平均:重みを付けずにクラスごとのf値を平均する
+    weighted平均:各クラスの支持度に応じて重みを付けて、クラスごとのf値を平均する
+    micro平均：すべてのクラスの偽陽性、偽陰性、真陽性の総数を計算しその値で計算する
+    
+#    
+	print('Micro average f1 score: {:.3f}'.format(f1_score(y_test, pred, average='micro')))
+	print('Macro average f1 score: {:.3f}'.format(f1_score(y_test, pred, average='macro')))
+
+5.3.4 回帰の基準
+   ・回帰器でscoreメソッドのR2を用いれば十分
+
+5.3.5 評価基準を用いたモデル選択
+  ・GridSearhCVにもcross_val_scoreにもscoringの引数を使えば評価基準で判定できる
+  
+＃ cross_val_socreの例  
+	# デフォルトのクラス分類スコアは精度
+	from sklearn.model_selection import cross_val_score
+	print('Default scoring: {}'.format(cross_val_score(SVC(), digits.data, digits.target == 9)))
+	# scoring='accuracy'としても結果は変わらない
+	explicit_accuracy = cross_val_score(SVC(), digits.data, digits.target == 9, scoring='accuracy')
+	print('Explicit accuracy scoring: {}'.format(explicit_accuracy))
+	roc_auc = cross_val_score(SVC(), digits.data, digits.target == 9, scoring='roc_auc')
+	print('AUC scoring: {}'.format(roc_auc))   
+
+# GridSearchCVの例
+	from sklearn.model_selection import GridSearchCV
+
+	X_train, X_test, y_train, y_test = train_test_split(digits.data, digits.target ==9 , random_state=0)
+	param_grid = {'gamma': [0.0001, 0.01, 0.1, 1, 10]}
+
+	# AUCをスコアに用いる
+	grid = GridSearchCV(SVC(), param_grid=param_grid, scoring='roc_auc')
+	grid.fit(X_train, y_train)
+	print('\nGrid-Search with AUC')
+	print('Best parameters:', grid.best_params_)
+	print('Best cross-validation socre (AUC): {:.3f}'.format(grid.best_score_))
+	print('Test set AUC: {:.3f}'.format(grid.score(X_test, y_test)))
+	
+  ・クラス分類におけるscoringパラメータの値として重要なのは
+    accracy,roc_auc,average_precision,f1,f1_macoro,f1_weighted
+    
+  ・回帰でよく用いられるのはr2,mean_squared_error   
+  
+  
+6章 アルゴリズムチェーンとパイプライン
+  ・PipelineとGridSearchCVを用いてすべての処理ステップを一度に行う
+  
+# 従来までのやり方
+	from sklearn.svm import SVC
+	from sklearn.datasets import load_breast_cancer
+	from sklearn.model_selection import train_test_split
+	from sklearn.preprocessing import MinMaxScaler
+
+	# データとロードして分割
+	cancer = load_breast_cancer()
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+	# 訓練データの最小値と最大値を計算
+	scaler = MinMaxScaler().fit(X_train)
+
+	# 訓練データをスケール変換
+	X_train_scaled = scaler.transform(X_train)
+
+	svm = SVC()
+	# SVMをスケール変換したデータで訓練
+	svm.fit(X_train_scaled, y_train)
+	# テストデータをスケール変換して、それを用いて評価
+	X_test_scaled = scaler.transform(X_test)
+	print('Test score: {:.2f}'.format(svm.score(X_test_scaled, y_test)))  
+	
+6.1 前処理を行う際のパラメータ選択
+  ・前処理をする前に交差検証のためのデータ分割を行う必要がある
+  ・Pipelineは前処理ステップとクラス分類器などの教師あり学習モデルを組み合わせる為に最もよく使われる
+  
+6.2 パイプラインの構築  
+  ・MinMaxScalerによるスケール変換を行ってからSVMを訓練する場合
+
+# Pipelineによる例  
+	from sklearn.pipeline import Pipeline
+	pipe = Pipeline([('scaler', MinMaxScaler()), ('svm', SVC())])
+	pipe.fit(X_train, y_train)
+	
+  ・テストデータを用いて評価するにはpipe.scoreを使う
+    print('Test score: {:.2f}'.format(pipe.score(X_test, y_test)))
+    
+  ・パイプラインを用いると、[前処理+クラス分類]プロセスに必要なコード量を減らすことが出来る
+  
+6-3 パイプラインを用いたグリッドサーチ
+  ・パイプラインを使う場合は個々のパラメータをステップの前に__を続け、その後ろにパラメータ名を書く
+
+
+# Pipelineによるグリッドサーチの例
+	param_grid = {'svm__C': [0.001, 0.01, 0.1, 1, 10, 100],
+	             'svm__gamma': [0.001, 0.01, 0.1, 1, 10, 100]} 
+	             
+	grid = GridSearchCV(pipe, param_grid=param_grid, cv=5)
+	grid.fit(X_train, y_train)
+	print('Best corss-validation accuracy: {:.2f}'.format(grid.best_score_))
+	print('Test set score: {:.2f}'.format(grid.score(X_test, y_test)))
+	print('Best parameters: {}'.format(grid.best_params_))
+	
+6.4 汎用パイプラインインターフェイス
+  ・パイプラインに並べるEstimatorに関する制約は、transformメソッドが定義されている必要があるということ
+  
+6.4.1 make_pipelineによる簡便なパイプライン生成
+  ・make_pipeline関数はクラス名に基づいて個々のステップに自動的に名前をつける
+  
+# make_pipelineの例    
+	from sklearn.pipeline import make_pipeline
+	# 標準の文法
+	pipe_long = Pipeline([('scaler', MinMaxScaler()), ('svm', SVC(C=100))])
+	# 短縮文法
+	pipe_short = make_pipeline(MinMaxScaler(), SVC(C=100))    
+	
+6.4.2 ステップ属性へのアクセス
+  ・パイプラインの各ステップにアクセスする方法は、named_steps属性を使う方法
+    ステップ名とEstimatorのディクショナリ
+    
+    
+# cancerデータセットを用いて、定義しておいたパイプラインを訓練
+	pipe.fit(cancer.data)
+	# 'pca'ステップ2主成分を取り出す
+	components = pipe.named_steps['pca'].components_
+	print('components.shape: {}'.format(components.shape))  
+	
+6.4.3 GridSearchCV内のパイプラインの属性へのアクセス
+
+#グリッドサーチを使った例
+    #まずmake_pipeline関数でパイプラインを作る
+    from sklearn.linear_model import LogisticRegression
+	pipe = make_pipeline(StandardScaler(), LogisticRegression()) 
+	
+	#パラメータグリッドを作る。
+	#LogisticRegressionsステップ名はクラス名小文字のlogisticRegression 
+	param_grid = {'logisticregression__C': [0.01, 0.1, 1, 10, 100]}
+	
+	#グリッドサーチを行う
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=4)
+	grid = GridSearchCV(pipe, param_grid, cv=5)
+	grid.fit(X_train, y_train)
+	
+	#最良モデルを確認する(grid.best_estimator_に格納されている)
+    print('Best estimator:\n{}'.format(grid.best_estimator_))
+    
+    #logisticRegressionのみにアクセスする場合
+    print('Logistic regression step:\n{}'.format(grid.best_estimator_.named_steps['logisticregression']))
+    
+    #個々の入力特徴量に対応する係数(重み)にアクセス
+    print('Logistic regression coefficients:\n{}'.format(grid.best_estimator_.named_steps["logisticregression"].coef_))
+    
+6.5 前処理ステップとモデルパラメータに対するグリッドサーチ
+   ・教師アリ学習タスクの結果を使って、前処理パラメータの調整を行う事ができる
+   
+# bostonデータをデータスケール変換、多項式特徴量の計算、リッジ回帰の3ステップする   
+	from sklearn.datasets import load_boston
+	boston = load_boston()
+	X_train, X_test, y_train, y_test = train_test_split(boston.data, boston.target, random_state=0)
+
+	from sklearn.preprocessing import PolynomialFeatures
+	pipe = make_pipeline(StandardScaler(), PolynomialFeatures(), Ridge())    
+
+	# パラメータの設定
+	param_grid = {'polynomialfeatures__degree': [1, 2, 3],
+	             'ridge__alpha': [0.001, 0.01, 0.1, 1, 10, 100]} 
+	             
+	# グリッドサーチの実行
+	grid = GridSearchCV(pipe, param_grid=param_grid, cv=5, n_jobs=-1)
+	grid.fit(X_train, y_train)  
+
+	# ヒートマップで可視化
+	plt.matshow(grid.cv_results_['mean_test_score'].reshape(3, -1), vmin=0, cmap='viridis')
+	plt.xlabel('ridge__alpha')
+	plt.ylabel('polynomialfeatures__degree')
+	plt.xticks(range(len(param_grid['ridge__alpha'])), param_grid['ridge__alpha'])
+	plt.yticks(range(len(param_grid['polynomialfeatures__degree'])),
+	          param_grid['po    
+	          
+    #最良のパラメータの表示
+    print('Best parameters: {}'.format(grid.best_params_))
+    
+    #最良のパラメータを使ったテストスコアの表示
+    print('Test-set score: {:.2f}'.format(grid.score(X_test, y_test)))
+       
+6.6 グリッドサーチによるモデルの選択
+
+# irisデータに対してRandomForestClassifierとSVCを比較する
+
+    #pipeを書く
+    pipe = Pipeline([('preprocessing', StandardScaler()), ('classifier', SVC())])
+    
+    #探索する範囲をparameter_girdとして定義する
+    #パイプラインのステップを飛ばす場合はそのステップをNoneとする
+    from sklearn.ensemble import RandomForestClassifier
+
+	param_grid = [
+	    {'classifier': [SVC()], 'preprocessing': [StandardScaler(), None],
+	    'classifier__gamma': [0.001, 0.01, 0.1, 1, 10, 100],
+	    'classifier__C':[0.001, 0.01, 0.1, 1, 10, 100]},
+	    {'classifier': [RandomForestClassifier(n_estimators=100)],
+	    'preprocessing': [None], 'classifier__max_features':[1, 2, 3]}]
+	    
+	X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+	grid = GridSearchCV(pipe, param_grid, cv=5)
+	grid.fit(X_train, y_train)
+
+	print('Best param:\n{}\n'.format(grid.best_params_))
+	print('Best cross-validation score: {:.2f}'.format(grid.best_score_))
+	print('Test-set score: {:.2f}'.format(grid.score(X_test, y_test)))  
+	
+	
+7章 テキストデータの処理
+  
+                                                   
